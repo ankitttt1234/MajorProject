@@ -5,17 +5,38 @@
     <link rel="stylesheet" href="https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v5.3.0/css/ol.css"
         type="text/css">
 
-
+    <style>
+        .circle {
+            height: 120px;
+            width: 120px;
+            background-color: gray;
+            border-radius: 50%;
+            display: inline-block;
+            z-index: 2;
+            position: absolute;
+            margin-top: 38%;
+            margin-left: 90%;
+        }
+    </style>
     <title>Bus Tracker</title>
 </head>
 
 <body>
-    <h1><center>Bus Location</center></h1>
-    <div id="map" style="width: 100%; height: 100%;"></div>
+    <h1>
+        <center>Bus Location</center>
+    </h1>
+    <div id="map" style="width: 100%; height: 100%;">
+        <span class="circle">
+            <center style="margin-top: 25%;font-size: larger;"><b>Speed</b></center>
+            <center style="margin-top: 5%;font-size: xx-large;" id="speed"><b>90</b></center>
+        </span>
+    </div>
+
     <div id="pointerLayer"></div>
     <div id="mapLayer"></div>
     <input id="latitude" type="hidden" />
     <input id="longitude" type="hidden" />
+
 
     <script src="https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v5.3.0/build/ol.js"></script>
 
@@ -36,11 +57,10 @@
 
                     //var latitude = obj.field1
                     //var longitude = obj.field2
-
+                    
                     document.getElementById("longitude").value = longitude
                     document.getElementById("latitude").value = latitude
-                    if(setUpDone){
-                        console.log("entering into non-setup")
+                    if (setUpDone) {
                         var map = document.getElementById("mapLayer").value
                         centerMapToNewCoordinatesAndRemovePointerLayer(longitude, latitude, map)
                         map.addLayer(getPointerLayer(longitude, latitude))
@@ -48,9 +68,16 @@
                     else {
                         setUpMap()
                     }
+
+                    lat1 = latitude
+                    long1 = longitude
+
                     latitude = latitude + 0.0002
                     longitude = longitude + 0.0002
 
+                    lat2 = latitude
+                    long2 = longitude
+                    calculateDistanceFromCoordinatesAndUpdateSpeedOnMap(lat1, long1, lat2, long2)
                 }
             }
         }
@@ -64,7 +91,6 @@
         function setUpMap() {
             var longitude = Number(document.getElementById("longitude").value)
             var latitude = Number(document.getElementById("latitude").value)
-            console.log(longitude + " : " + latitude)
 
             var map = setUpMapLayer(latitude, longitude)
 
@@ -72,15 +98,14 @@
             map.addLayer(layer)
 
             setUpDone = true
-            console.log("Map setup is done")
 
             document.getElementById("mapLayer").value = map
             return map
         }
 
 
-        function getPointerLayer(lon, lat){
-           var layer =  new ol.layer.Vector({
+        function getPointerLayer(lon, lat) {
+            var layer = new ol.layer.Vector({
                 source: new ol.source.Vector({
                     features: [
                         new ol.Feature({
@@ -130,10 +155,57 @@
         }
 
         function centerMapToNewCoordinatesAndRemovePointerLayer(long, lat, map) {
-            console.log("Long: " + long + " Lat: " + lat);
+            console.log("Longitude: " + long + " Latitude: " + lat);
             map.getView().setCenter(ol.proj.fromLonLat([longitude, latitude]));
             removePointerLayer(map)
             return map
+        }
+
+        function distanceOnGeo(lat1, lon1,  lat2,  lon2) {
+
+            // Convert degrees to radians
+            lat1 = lat1 * Math.PI / 180.0;
+            lon1 = lon1 * Math.PI / 180.0;
+
+            lat2 = lat2 * Math.PI / 180.0;
+            lon2 = lon2 * Math.PI / 180.0;
+
+            // radius of earth in metres
+            r = 6378100;
+
+            // P
+            rho1 = r * Math.cos(lat1);
+            z1 = r * Math.sin(lat1);
+            x1 = rho1 * Math.cos(lon1);
+            y1 = rho1 * Math.sin(lon1);
+
+            // Q
+            rho2 = r * Math.cos(lat2);
+            z2 = r * Math.sin(lat2);
+            x2 = rho2 * Math.cos(lon2);
+            y2 = rho2 * Math.sin(lon2);
+
+            // Dot product
+            dot = (x1 * x2 + y1 * y2 + z1 * z2);
+            cos_theta = dot / (r * r);
+
+            theta = Math.acos(cos_theta);
+
+            // Distance in Metres
+            return r * theta;
+        }
+
+
+        function calculateSpeedFromDistanceAndUpdateMap(distance){
+            time = 3;
+            speedKPH = Math.round(((distance/time) *3600.0)/1000.0);
+            console.log("Speed of Bus : "+ speedKPH)
+            document.getElementById("speed").innerHTML = speedKPH
+        }
+
+        function calculateDistanceFromCoordinatesAndUpdateSpeedOnMap(lat1, long1, lat2, long2){
+           var distance = distanceOnGeo(lat1, long1, lat2, long2);
+           calculateSpeedFromDistanceAndUpdateMap(distance)
         }
 
     </script>
